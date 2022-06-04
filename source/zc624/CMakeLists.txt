@@ -28,7 +28,7 @@ add_executable(OutputZc
         CMsgDac.cpp
 )
 
-pico_generate_pio_header(OutputZc ${CMAKE_CURRENT_LIST_DIR}/pulse_gen.pio OUTPUT_DIR ${CMAKE_CURRENT_LIST_DIR}/generated)
+pico_generate_pio_header(OutputZc ${CMAKE_CURRENT_LIST_DIR}/pulse_gen.pio OUTPUT_DIR ${CMAKE_BINARY_DIR}/generated)
 
 
 pico_set_program_name(OutputZc "OutputZc")

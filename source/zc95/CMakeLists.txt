@@ -16,9 +16,12 @@ include(pico_sdk_import.cmake)
 
 project(zc95 C CXX ASM)
 
+include(CheckGit.cmake)
+CheckGitSetup()
+
+
 # Initialise the Raspberry Pi Pico SDK
 pico_sdk_init()
-
 
 # Add executable. Default name is the project name, version 0.1
 add_executable(zc95 
@@ -86,15 +89,22 @@ add_executable(zc95
   display/CMenuSettingLedBrightnes
   display/CMenuSettingPowerStep
   display/CMenuSettingRampUpTime
+  display/CMenuSettingAbout
   display/COptionsList
   display/CHorzBarGraph
+  )
+  
+  target_include_directories(zc95 PRIVATE 
+  core1/
+  core1/outputs/
+  core1/routines/
   )
 
 # target_compile_options(zc95 PUBLIC -Werror -Wall -Wextra -Wnull-dereference)
 target_compile_options(zc95 PUBLIC -Wall -Wnull-dereference)
  
-pico_generate_pio_header(zc95 ${CMAKE_CURRENT_LIST_DIR}/ws2812.pio OUTPUT_DIR ${CMAKE_CURRENT_LIST_DIR}/generated)
-pico_generate_pio_header(zc95 ${CMAKE_CURRENT_LIST_DIR}/collar433.pio OUTPUT_DIR ${CMAKE_CURRENT_LIST_DIR}/generated)
+pico_generate_pio_header(zc95 ${CMAKE_CURRENT_LIST_DIR}/ws2812.pio OUTPUT_DIR ${CMAKE_BINARY_DIR}/generated)
+pico_generate_pio_header(zc95 ${CMAKE_CURRENT_LIST_DIR}/collar433.pio OUTPUT_DIR ${CMAKE_BINARY_DIR}/generated)
 
 
 pico_set_program_name(zc95 "zc95")
@@ -118,6 +128,7 @@ target_link_libraries(zc95
         pico_multicore
         hagl
         hagl_hal
+        git_version
         )
 
 pico_add_extra_outputs(zc95)

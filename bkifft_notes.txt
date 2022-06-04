@@ -1,0 +1,7 @@
+made changes:
+- used max232 with its 1 uF charge pumps
+
+planned changes:
+- use mk312 buttons
+- change 12V rail to 13.3 V to use a 3s?p liion battery
+  

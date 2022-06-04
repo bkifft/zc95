@@ -25,6 +25,7 @@ set(PICO_SDK_FETCH_FROM_GIT_PATH "${PICO_SDK_FETCH_FROM_GIT_PATH}" CACHE FILEPAT
 if (NOT PICO_SDK_PATH)
     if (PICO_SDK_FETCH_FROM_GIT)
         include(FetchContent)
+        set(FETCHCONTENT_QUIET FALSE)
         set(FETCHCONTENT_BASE_DIR_SAVE ${FETCHCONTENT_BASE_DIR})
         if (PICO_SDK_FETCH_FROM_GIT_PATH)
             get_filename_component(FETCHCONTENT_BASE_DIR "${PICO_SDK_FETCH_FROM_GIT_PATH}" REALPATH BASE_DIR "${CMAKE_SOURCE_DIR}")
@@ -33,6 +34,7 @@ if (NOT PICO_SDK_PATH)
                 pico_sdk
                 GIT_REPOSITORY https://github.com/raspberrypi/pico-sdk
                 GIT_TAG master
+                GIT_PROGRESS TRUE
         )
         if (NOT pico_sdk)
             message("Downloading Raspberry Pi Pico SDK")
