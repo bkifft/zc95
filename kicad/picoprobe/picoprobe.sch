@@ -1,0 +1,448 @@
+EESchema Schematic File Version 4
+EELAYER 30 0
+EELAYER END
+$Descr A4 11693 8268
+encoding utf-8
+Sheet 1 1
+Title ""
+Date ""
+Rev ""
+Comp ""
+Comment1 ""
+Comment2 ""
+Comment3 ""
+Comment4 ""
+$EndDescr
+$Comp
+L MCU_RaspberryPi_and_Boards:Pico U1
+U 1 1 629C84DA
+P 2375 2675
+F 0 "U1" H 2375 3890 50  0000 C CNN
+F 1 "Pico" H 2375 3799 50  0000 C CNN
+F 2 "MCU_RaspberryPi_and_Boards:RPi_Pico_SMD_TH" V 2375 2675 50  0001 C CNN
+F 3 "" H 2375 2675 50  0001 C CNN
+	1    2375 2675
+	1    0    0    -1  
+$EndComp
+$Comp
+L Connector:Conn_01x20_Male J1
+U 1 1 629CC515
+P 4400 2600
+F 0 "J1" H 4508 3681 50  0000 C CNN
+F 1 "Connector left" H 4508 3590 50  0000 C CNN
+F 2 "Connector_PinHeader_2.54mm:PinHeader_1x20_P2.54mm_Vertical" H 4400 2600 50  0001 C CNN
+F 3 "~" H 4400 2600 50  0001 C CNN
+	1    4400 2600
+	1    0    0    -1  
+$EndComp
+$Comp
+L Connector:Conn_01x20_Male J2
+U 1 1 629CE0E6
+P 5700 2700
+F 0 "J2" H 5672 2582 50  0000 R CNN
+F 1 "Connector right" H 5672 2673 50  0000 R CNN
+F 2 "Connector_PinHeader_2.54mm:PinHeader_1x20_P2.54mm_Vertical" H 5700 2700 50  0001 C CNN
+F 3 "~" H 5700 2700 50  0001 C CNN
+	1    5700 2700
+	-1   0    0    1   
+$EndComp
+Text GLabel 1525 1725 0    50   Input ~ 0
+tar_rx
+Text GLabel 1525 1825 0    50   Input ~ 0
+tar_tx
+Text GLabel 1550 2025 0    50   Input ~ 0
+pro_rx
+Text GLabel 1550 2125 0    50   Input ~ 0
+pro_tx
+Wire Wire Line
+	1525 1725 1675 1725
+Wire Wire Line
+	1675 1825 1525 1825
+Wire Wire Line
+	1550 2025 1675 2025
+Wire Wire Line
+	1675 2125 1550 2125
+Text GLabel 1550 2225 0    50   Input ~ 0
+pro_swclk
+Text GLabel 1550 2325 0    50   Input ~ 0
+pro_swdio
+Wire Wire Line
+	1550 2225 1675 2225
+Wire Wire Line
+	1675 2325 1550 2325
+Text GLabel 1550 2525 0    50   Input ~ 0
+pro_rst
+Wire Wire Line
+	1550 2525 1675 2525
+$Comp
+L power:GND #PWR0101
+U 1 1 629D3450
+P 1675 1925
+F 0 "#PWR0101" H 1675 1675 50  0001 C CNN
+F 1 "GND" V 1680 1797 50  0000 R CNN
+F 2 "" H 1675 1925 50  0001 C CNN
+F 3 "" H 1675 1925 50  0001 C CNN
+	1    1675 1925
+	0    1    1    0   
+$EndComp
+$Comp
+L power:GND #PWR0102
+U 1 1 629D3D6B
+P 1675 2425
+F 0 "#PWR0102" H 1675 2175 50  0001 C CNN
+F 1 "GND" V 1680 2297 50  0000 R CNN
+F 2 "" H 1675 2425 50  0001 C CNN
+F 3 "" H 1675 2425 50  0001 C CNN
+	1    1675 2425
+	0    1    1    0   
+$EndComp
+$Comp
+L power:GND #PWR0103
+U 1 1 629D46EB
+P 1675 2925
+F 0 "#PWR0103" H 1675 2675 50  0001 C CNN
+F 1 "GND" V 1680 2797 50  0000 R CNN
+F 2 "" H 1675 2925 50  0001 C CNN
+F 3 "" H 1675 2925 50  0001 C CNN
+	1    1675 2925
+	0    1    1    0   
+$EndComp
+$Comp
+L power:GND #PWR0104
+U 1 1 629D51A4
+P 1675 3425
+F 0 "#PWR0104" H 1675 3175 50  0001 C CNN
+F 1 "GND" V 1680 3297 50  0000 R CNN
+F 2 "" H 1675 3425 50  0001 C CNN
+F 3 "" H 1675 3425 50  0001 C CNN
+	1    1675 3425
+	0    1    1    0   
+$EndComp
+$Comp
+L power:GND #PWR0105
+U 1 1 629D5738
+P 3075 3425
+F 0 "#PWR0105" H 3075 3175 50  0001 C CNN
+F 1 "GND" V 3080 3297 50  0000 R CNN
+F 2 "" H 3075 3425 50  0001 C CNN
+F 3 "" H 3075 3425 50  0001 C CNN
+	1    3075 3425
+	0    -1   -1   0   
+$EndComp
+$Comp
+L power:GND #PWR0106
+U 1 1 629D5FF5
+P 3075 2925
+F 0 "#PWR0106" H 3075 2675 50  0001 C CNN
+F 1 "GND" V 3080 2797 50  0000 R CNN
+F 2 "" H 3075 2925 50  0001 C CNN
+F 3 "" H 3075 2925 50  0001 C CNN
+	1    3075 2925
+	0    -1   -1   0   
+$EndComp
+$Comp
+L power:GND #PWR0107
+U 1 1 629D6458
+P 3075 1925
+F 0 "#PWR0107" H 3075 1675 50  0001 C CNN
+F 1 "GND" V 3080 1797 50  0000 R CNN
+F 2 "" H 3075 1925 50  0001 C CNN
+F 3 "" H 3075 1925 50  0001 C CNN
+	1    3075 1925
+	0    -1   -1   0   
+$EndComp
+$Comp
+L power:GND #PWR0108
+U 1 1 629D6CB5
+P 3075 2425
+F 0 "#PWR0108" H 3075 2175 50  0001 C CNN
+F 1 "GND" V 3080 2297 50  0000 R CNN
+F 2 "" H 3075 2425 50  0001 C CNN
+F 3 "" H 3075 2425 50  0001 C CNN
+	1    3075 2425
+	0    -1   -1   0   
+$EndComp
+Text GLabel 3075 2025 2    50   Input ~ 0
+tar_rst
+NoConn ~ 3075 3625
+NoConn ~ 3075 3525
+NoConn ~ 3075 3325
+NoConn ~ 3075 3225
+NoConn ~ 3075 3125
+NoConn ~ 3075 3025
+NoConn ~ 3075 2825
+NoConn ~ 3075 2725
+NoConn ~ 3075 2625
+NoConn ~ 3075 2525
+NoConn ~ 3075 2325
+NoConn ~ 3075 2225
+NoConn ~ 3075 2125
+NoConn ~ 3075 1825
+NoConn ~ 3075 1725
+NoConn ~ 1675 3625
+NoConn ~ 1675 3525
+NoConn ~ 1675 3325
+NoConn ~ 1675 3225
+NoConn ~ 1675 3125
+NoConn ~ 1675 3025
+NoConn ~ 1675 2825
+NoConn ~ 1675 2725
+NoConn ~ 1675 2625
+$Comp
+L Connector:Conn_01x03_Male J4
+U 1 1 629B9D59
+P 4375 4200
+F 0 "J4" V 4437 4344 50  0000 L CNN
+F 1 "UART 1" V 4528 4344 50  0000 L CNN
+F 2 "Connector_PinHeader_2.54mm:PinHeader_1x03_P2.54mm_Vertical" H 4375 4200 50  0001 C CNN
+F 3 "~" H 4375 4200 50  0001 C CNN
+	1    4375 4200
+	0    1    1    0   
+$EndComp
+$Comp
+L Connector:Conn_01x03_Male J5
+U 1 1 629BC1C3
+P 5175 4200
+F 0 "J5" V 5237 4344 50  0000 L CNN
+F 1 "UART 2" V 5328 4344 50  0000 L CNN
+F 2 "Connector_PinHeader_2.54mm:PinHeader_1x03_P2.54mm_Vertical" H 5175 4200 50  0001 C CNN
+F 3 "~" H 5175 4200 50  0001 C CNN
+	1    5175 4200
+	0    1    1    0   
+$EndComp
+$Comp
+L Connector:Conn_01x03_Male J6
+U 1 1 629BCA7F
+P 6025 4200
+F 0 "J6" V 6087 4344 50  0000 L CNN
+F 1 "SWCLK" V 6178 4344 50  0000 L CNN
+F 2 "Connector_PinHeader_2.54mm:PinHeader_1x03_P2.54mm_Vertical" H 6025 4200 50  0001 C CNN
+F 3 "~" H 6025 4200 50  0001 C CNN
+	1    6025 4200
+	0    1    1    0   
+$EndComp
+$Comp
+L Connector:Conn_01x03_Male J7
+U 1 1 629BD076
+P 6775 4175
+F 0 "J7" V 6837 4319 50  0000 L CNN
+F 1 "SWDIO" V 6928 4319 50  0000 L CNN
+F 2 "Connector_PinHeader_2.54mm:PinHeader_1x03_P2.54mm_Vertical" H 6775 4175 50  0001 C CNN
+F 3 "~" H 6775 4175 50  0001 C CNN
+	1    6775 4175
+	0    1    1    0   
+$EndComp
+$Comp
+L Connector:Conn_01x03_Male J8
+U 1 1 629BD577
+P 7475 4175
+F 0 "J8" V 7537 4319 50  0000 L CNN
+F 1 "RST" V 7628 4319 50  0000 L CNN
+F 2 "Connector_PinHeader_2.54mm:PinHeader_1x03_P2.54mm_Vertical" H 7475 4175 50  0001 C CNN
+F 3 "~" H 7475 4175 50  0001 C CNN
+	1    7475 4175
+	0    1    1    0   
+$EndComp
+Text GLabel 4375 4400 3    50   Input ~ 0
+UART1
+Text GLabel 5175 4400 3    50   Input ~ 0
+UART2
+Text GLabel 4600 1700 2    50   Input ~ 0
+UART1
+Text GLabel 4600 1800 2    50   Input ~ 0
+UART2
+Text GLabel 4275 4400 3    50   Input ~ 0
+tar_rx
+Text GLabel 4475 4400 3    50   Input ~ 0
+pro_tx
+Text GLabel 5075 4400 3    50   Input ~ 0
+tar_tx
+Text GLabel 5275 4400 3    50   Input ~ 0
+pro_rx
+Text GLabel 6025 4400 3    50   Input ~ 0
+SWCLK
+Text GLabel 6775 4375 3    50   Input ~ 0
+SWDIO
+Text GLabel 7475 4375 3    50   Input ~ 0
+RST
+Text GLabel 4600 2200 2    50   Input ~ 0
+SWCLK
+Text GLabel 4600 2300 2    50   Input ~ 0
+SWDIO
+Text GLabel 4600 2500 2    50   Input ~ 0
+RST
+$Comp
+L power:GND #PWR02
+U 1 1 629C4029
+P 4600 1900
+F 0 "#PWR02" H 4600 1650 50  0001 C CNN
+F 1 "GND" V 4605 1772 50  0000 R CNN
+F 2 "" H 4600 1900 50  0001 C CNN
+F 3 "" H 4600 1900 50  0001 C CNN
+	1    4600 1900
+	0    -1   -1   0   
+$EndComp
+$Comp
+L power:GND #PWR03
+U 1 1 629C48C3
+P 4600 2400
+F 0 "#PWR03" H 4600 2150 50  0001 C CNN
+F 1 "GND" V 4605 2272 50  0000 R CNN
+F 2 "" H 4600 2400 50  0001 C CNN
+F 3 "" H 4600 2400 50  0001 C CNN
+	1    4600 2400
+	0    -1   -1   0   
+$EndComp
+$Comp
+L power:GND #PWR04
+U 1 1 629C4D44
+P 4600 2900
+F 0 "#PWR04" H 4600 2650 50  0001 C CNN
+F 1 "GND" V 4605 2772 50  0000 R CNN
+F 2 "" H 4600 2900 50  0001 C CNN
+F 3 "" H 4600 2900 50  0001 C CNN
+	1    4600 2900
+	0    -1   -1   0   
+$EndComp
+$Comp
+L power:GND #PWR05
+U 1 1 629C537F
+P 4600 3400
+F 0 "#PWR05" H 4600 3150 50  0001 C CNN
+F 1 "GND" V 4605 3272 50  0000 R CNN
+F 2 "" H 4600 3400 50  0001 C CNN
+F 3 "" H 4600 3400 50  0001 C CNN
+	1    4600 3400
+	0    -1   -1   0   
+$EndComp
+$Comp
+L power:GND #PWR09
+U 1 1 629C58FC
+P 5500 3400
+F 0 "#PWR09" H 5500 3150 50  0001 C CNN
+F 1 "GND" V 5505 3272 50  0000 R CNN
+F 2 "" H 5500 3400 50  0001 C CNN
+F 3 "" H 5500 3400 50  0001 C CNN
+	1    5500 3400
+	0    1    1    0   
+$EndComp
+$Comp
+L power:GND #PWR08
+U 1 1 629C61CE
+P 5500 2900
+F 0 "#PWR08" H 5500 2650 50  0001 C CNN
+F 1 "GND" V 5505 2772 50  0000 R CNN
+F 2 "" H 5500 2900 50  0001 C CNN
+F 3 "" H 5500 2900 50  0001 C CNN
+	1    5500 2900
+	0    1    1    0   
+$EndComp
+$Comp
+L power:GND #PWR07
+U 1 1 629C6635
+P 5500 2400
+F 0 "#PWR07" H 5500 2150 50  0001 C CNN
+F 1 "GND" V 5505 2272 50  0000 R CNN
+F 2 "" H 5500 2400 50  0001 C CNN
+F 3 "" H 5500 2400 50  0001 C CNN
+	1    5500 2400
+	0    1    1    0   
+$EndComp
+$Comp
+L power:GND #PWR06
+U 1 1 629C6C21
+P 5500 1900
+F 0 "#PWR06" H 5500 1650 50  0001 C CNN
+F 1 "GND" V 5505 1772 50  0000 R CNN
+F 2 "" H 5500 1900 50  0001 C CNN
+F 3 "" H 5500 1900 50  0001 C CNN
+	1    5500 1900
+	0    1    1    0   
+$EndComp
+Text GLabel 6125 4400 3    50   Input ~ 0
+pro_swclk
+Text GLabel 6875 4375 3    50   Input ~ 0
+pro_swdio
+Text GLabel 7575 4375 3    50   Input ~ 0
+pro_rst
+Text GLabel 7375 4375 3    50   Input ~ 0
+tar_rst
+Text GLabel 2250 4025 0    50   Input ~ 0
+tar_swclk
+$Comp
+L Connector:Conn_01x03_Male J3
+U 1 1 629C7D73
+P 2375 4425
+F 0 "J3" V 2529 4237 50  0000 R CNN
+F 1 "SWD" V 2438 4237 50  0000 R CNN
+F 2 "Connector_PinHeader_2.54mm:PinHeader_1x03_P2.54mm_Vertical" H 2375 4425 50  0001 C CNN
+F 3 "~" H 2375 4425 50  0001 C CNN
+	1    2375 4425
+	0    -1   -1   0   
+$EndComp
+Text GLabel 2500 4025 2    50   Input ~ 0
+tar_swdio
+$Comp
+L power:GND #PWR01
+U 1 1 629C9C86
+P 2325 3850
+F 0 "#PWR01" H 2325 3600 50  0001 C CNN
+F 1 "GND" V 2330 3722 50  0000 R CNN
+F 2 "" H 2325 3850 50  0001 C CNN
+F 3 "" H 2325 3850 50  0001 C CNN
+	1    2325 3850
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	2475 3825 2475 4025
+Wire Wire Line
+	2275 3825 2275 4025
+Wire Wire Line
+	2250 4025 2275 4025
+Connection ~ 2275 4025
+Wire Wire Line
+	2275 4025 2275 4225
+Wire Wire Line
+	2475 4025 2500 4025
+Connection ~ 2475 4025
+Wire Wire Line
+	2475 4025 2475 4225
+Wire Wire Line
+	2375 3825 2375 4225
+Text GLabel 5925 4400 3    50   Input ~ 0
+tar_swclk
+Text GLabel 6675 4375 3    50   Input ~ 0
+tar_swdio
+NoConn ~ 4600 3300
+NoConn ~ 4600 3200
+NoConn ~ 4600 3100
+NoConn ~ 4600 3000
+NoConn ~ 4600 2800
+NoConn ~ 4600 2700
+NoConn ~ 4600 2600
+NoConn ~ 4600 2100
+NoConn ~ 4600 2000
+NoConn ~ 5500 1700
+NoConn ~ 5500 1800
+NoConn ~ 5500 2000
+NoConn ~ 5500 2100
+NoConn ~ 5500 2200
+NoConn ~ 5500 2300
+NoConn ~ 5500 2500
+NoConn ~ 5500 2600
+NoConn ~ 5500 2700
+NoConn ~ 5500 2800
+NoConn ~ 5500 3000
+NoConn ~ 5500 3100
+NoConn ~ 5500 3200
+NoConn ~ 5500 3300
+NoConn ~ 5500 3500
+NoConn ~ 5500 3600
+NoConn ~ 4600 3600
+NoConn ~ 4600 3500
+Wire Wire Line
+	2375 3825 2325 3825
+Wire Wire Line
+	2325 3825 2325 3850
+Connection ~ 2375 3825
+$EndSCHEMATC
