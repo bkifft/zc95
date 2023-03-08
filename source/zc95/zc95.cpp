@@ -1,6 +1,6 @@
 /*
  * ZC95
- * Copyright (C) 2021  CrashOverride85
+ * Copyright (C) 2023  CrashOverride85
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,6 +21,7 @@
 #include <string.h>
 #include <inttypes.h>
 
+#include "globals.h"
 #include "config.h"
 #include "git_version.h"
 
@@ -33,7 +34,6 @@
 #include "hardware/regs/addressmap.h"
 #include "hardware/adc.h"
 
-#include "version.h"
 #include "i2c_scan.h"
 #include "CLedControl.h"
 #include "CControlsPortExp.h"
@@ -42,26 +42,38 @@
 #include "CSavedSettings.h"
 #include "CTimingTest.h"
 #include "CHwCheck.h"
+#include "CAnalogueCapture.h"
+#include "CBatteryGauge.h"
+#include "CDebugOutput.h"
+
+#include "AudioInput/CMCP4651.h"
+#include "AudioInput/CAudio.h"
 
 #include "display/CDisplay.h"
 #include "display/CMainMenu.h"
+#include "display/CMenuApMode.h"
 
 #include "core1/Core1.h"
 #include "core1/Core1Messages.h"
 #include "core1/output/CChannelConfig.h"
 #include "core1/routines/CRoutines.h"
 #include "core1/CRoutineOutput.h"
-#include "core1/CRoutineOutputDebug.h"
 #include "core1/CRoutineOutputCore1.h"
 
-#include "FpKnobs/CFpRotEnc.h"
-#include "FpKnobs/CFpAnalog.h"
+#include "RemoteAccess/CWifi.h"
+
+#include "FpKnobs/CFrontPanel.h"
 #include "ECButtons.h"
 
 CControlsPortExp controls = CControlsPortExp(CONTROLS_PORT_EXP_ADDR);
 CExtInputPortExp *ext_input = NULL;
 CEeprom eeprom = CEeprom(I2C_PORT, EEPROM_ADDR);
-CFpKnobs *_front_pannel = NULL;
+CFrontPanel *_front_pannel = NULL;
+CAnalogueCapture analogueCapture;
+CBatteryGauge batteryGauge;
+CMCP4651 audio_gain;
+CAudio audio(&analogueCapture, &audio_gain, &controls);
+CWifi *wifi = NULL;
 
 void gpio_callback(uint gpio, uint32_t events) 
 {
@@ -77,12 +89,12 @@ void gpio_callback(uint gpio, uint32_t events)
     else if (gpio == PIN_FP_INT1)
     {
         if (_front_pannel != NULL)
-            _front_pannel->interupt(CFpKnobs::port_exp::U1);
+            _front_pannel->interupt(CFrontPanel::port_exp::U1);
     }
     else if (gpio == PIN_FP_INT2)
     {
         if (_front_pannel != NULL)
-            _front_pannel->interupt(CFpKnobs::port_exp::U2);
+            _front_pannel->interupt(CFrontPanel::port_exp::U2);
     }
 }
 
@@ -137,14 +149,23 @@ void seed_random_from_rosc()
 
 int main()
 {
-    stdio_init_all();
+    // Serial going to 3.5mm aux socket
+    gpio_set_function(PIN_AUX_UART_TX, GPIO_FUNC_UART);
+    gpio_set_function(PIN_AUX_UART_RX, GPIO_FUNC_UART);
+    
+    // Serial on acc port
+    gpio_set_function(PIN_ACC_UART_TX, GPIO_FUNC_UART);
+    gpio_set_function(PIN_ACC_UART_RX, GPIO_FUNC_UART);    
+    
+    // For now, until settings loaded from eeprom, send debugging info to accessory port
+    CDebugOutput::set_debug_destination(CDebugOutput::debug_dest_t::ACC);
+    
     adc_init();
     messages_init();
 
-    // 3.5mm serial socket
-    gpio_set_function(PIN_UART_TX, GPIO_FUNC_UART);
-    gpio_set_function(PIN_UART_RX, GPIO_FUNC_UART);
-    printf("Startup, firmware version: %s\n", kGitHash);
+    printf("\n\nZC95 Startup, firmware version: %s\n", kGitHash);
+
+    mutex_init(&gI2cMutex);
 
     // I2C Initialisation
     i2c_init(i2c_default, 100 * 1000);
@@ -153,20 +174,35 @@ int main()
     gpio_pull_up(PICO_DEFAULT_I2C_SDA_PIN);
     gpio_pull_up(PICO_DEFAULT_I2C_SCL_PIN);
 
-    CHwCheck hw_check;
-    hw_check.check(); // If a fault is found, this never returns
-
+    CHwCheck hw_check(&batteryGauge);
+    hw_check.check_part1(); // If a fault is found, this never returns
+    audio.set_audio_digipot_found(hw_check.audio_digipot_found());
+    
     // switch off backlight until init done
     controls.set_lcd_backlight(false);
-    
+
     // Make sure there is some semi-random-ish data available
     seed_random_from_rosc();
 
     // Note eeprom ic is on i2c bus
     sleep_ms(100); // wait for eeprom to be ready
     CSavedSettings settings = CSavedSettings(&eeprom);
+    g_SavedSettings = &settings;
 
-    _front_pannel = new CFpAnalog(&settings); // new CFpRotEnc(&settings);
+    // Configure AUX port for serial or audio use
+    if (settings.get_aux_port_use() == CSavedSettings::setting_aux_port_use::AUDIO)
+    {
+        //sleep_ms(100); // wait for eeprom to be ready
+        controls.audio_input_enable(true);
+    }
+    else
+    {
+        controls.audio_input_enable(false);
+    }
+
+    CDebugOutput::set_debug_destination_from_settings(&settings);
+
+    _front_pannel = new CFrontPanel(&settings);
 
     // Front pannel LEDs - give some feedback we're powering up (display takes almost second to appear)
     CLedControl led = CLedControl(PIN_LED, &settings);
@@ -189,22 +225,34 @@ int main()
     CDisplay display = CDisplay();
     display.init(); // This takes some time - not far off a second
 
-    led.set_all_led_colour(LedColour::Black);
-
     // Get list of available patterns / routines
-    std::vector<CRoutineMaker*> routines;
+    std::vector<CRoutines::Routine> routines;
     CRoutines::get_routines(&routines);
    
+    hw_check.check_part2(&led, &controls); // If a fault is found, this never returns
+
+    // Queue used for pulses from audio processing on core0 being sent to core1 for output
+    for (uint8_t channel = 0; channel < MAX_CHANNELS; channel++)
+        queue_init(&gPulseQueue[channel], sizeof(pulse_message_t), PULSE_QUEUE_LENGTH);
+
+    // Queue used for routines (so far just Lua) running on Core1 to send debug messages (via print())
+    // out over a websocket connection, if running via RemoteAccess
+    queue_init(&gPatternTextOutputQueue, sizeof(pattern_text_output_t), PATTERN_TEXT_OUTPUT_QUEUE_LENGTH);
+
+    // Load/set gain, mic preamp, etc., from eeprom
+    audio.init(&settings, &display);
+
+    analogueCapture.start();
+
+    led.set_all_led_colour(LedColour::Black);
+
     sleep_ms(100);
-   
-    #ifdef SINGLE_CORE
-        Core1 *core1 = new Core1(&routines, &settings);
-        core1->init();
-        CRoutineOutput *routine_output = new CRoutineOutputDebug(core1, &display);
-    #else
-        core1_start(&routines, &settings);
-        CRoutineOutput *routine_output = new CRoutineOutputCore1(&display, &led, &ext_input);
-    #endif
+
+    core1_start(&routines, &settings);
+    CRoutineOutput* routine_output = new CRoutineOutputCore1(&display, &led, &ext_input);
+
+    audio.set_routine_output(routine_output);
+    wifi = new CWifi(&analogueCapture, routine_output, &routines);  
 
     // Configure port expander used for external inputs (accessory & trigger sockets)
     ext_input = new CExtInputPortExp(EXT_INPUT_PORT_EXP_ADDR, &led, routine_output);
@@ -215,7 +263,7 @@ int main()
     ext_input->process(true);
 
 
-    CMainMenu routine_selection = CMainMenu(&display, &routines, &controls, &settings, routine_output);
+    CMainMenu routine_selection = CMainMenu(&display, &routines, &controls, &settings, routine_output, &hw_check, &audio, &analogueCapture, wifi);
     routine_selection.show();
     CMenu *current_menu = &routine_selection;
     display.set_current_menu(current_menu);
@@ -224,9 +272,12 @@ int main()
     led.loop();
     controls.set_lcd_backlight(true);
     uint64_t last_analog_check = 0;
+    display.set_battery_percentage(batteryGauge.get_battery_percentage());
+
     while (1) 
     {
         uint64_t loop_start = time_us_64();
+        wifi->loop();
 
         display.update();
         process_front_pannel_input(&controls, current_menu);
@@ -252,19 +303,40 @@ int main()
             led.loop(true); // ~55us    
 
             uint64_t timenow = time_us_64();
-            printf("Loop time: %" PRId64 ", batt: %d\n", timenow - loop_start, hw_check.get_battery_percentage());
-            display.set_battery_percentage(hw_check.get_battery_percentage());
+            uint8_t batt_percentage = batteryGauge.get_battery_percentage();
+            printf("Loop time: %" PRId64 ", batt: %d\n", timenow - loop_start, batt_percentage);
+            display.set_battery_percentage(batt_percentage);
         }
         else
         {
             ext_input->process(false);
             controls.process(false);
             _front_pannel->process(false);     
-            hw_check.process();
+         //   hw_check.process();
         }
 
         routine_output->loop();
         led.loop();
+        analogueCapture.process();
+        audio.process();
+
+        if (audio.is_audio_update_available(true))
+        {
+            display.set_update_required();
+        }
+
+        if (analogueCapture.new_battery_readings_available())
+        {
+            uint8_t readings_count = 0;
+            uint8_t *readings = analogueCapture.get_battery_readings(&readings_count);
+            batteryGauge.add_raw_adc_readings(readings, readings_count);
+        }
+
+        if (gFatalError)
+        {
+            routine_output->stop_routine();
+            hw_check.die(&led, gErrorString); // never returns
+        }
     }
 
     return 0;

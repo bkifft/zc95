@@ -22,10 +22,14 @@
 
 CMainMenu::CMainMenu(
     CDisplay* display, 
-    std::vector<CRoutineMaker*> *routines,
+    std::vector<CRoutines::Routine> *routines,
     CGetButtonState *buttons,
     CSavedSettings *settings, 
-    CRoutineOutput *routine_output
+    CRoutineOutput *routine_output,
+    CHwCheck *hwCheck,
+    CAudio *audio,
+    CAnalogueCapture *analogueCapture,
+    CWifi *wifi
 )
 {
     printf("CMainMenu() \n");
@@ -34,9 +38,8 @@ CMainMenu::CMainMenu(
     _buttons = buttons;
     _settings = settings;
 
-    _submenu_active = new CMenuRoutineSelection(_display, _routines, _buttons, _settings, routine_output);
+    _submenu_active = new CMenuRoutineSelection(_display, _routines, _buttons, _settings, routine_output, hwCheck, audio, analogueCapture, wifi);
     _submenu_active->show();
-   
 }
 
 CMainMenu::~CMainMenu()

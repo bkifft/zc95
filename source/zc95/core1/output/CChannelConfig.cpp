@@ -61,7 +61,7 @@ void CChannelConfig::configure_channels_from_saved_config(COutputChannel** activ
                 break;
 
             case  CChannel_types::channel_type::CHANNEL_INTERNAL:
-                active_channels[channel_id] = new CZC1ChannelFull(_saved_settings, &_zc1_comms, _power_level_control, channel_id);
+                active_channels[channel_id] = new CZC624ChannelFull(_saved_settings, &_zc614_comms, _power_level_control, channel_id);
                 break;
 
             default:
@@ -69,4 +69,12 @@ void CChannelConfig::configure_channels_from_saved_config(COutputChannel** activ
                 break;
         }
     }
+}
+
+void CChannelConfig::shutdown_zc624()
+{
+    printf("shutting down zc624 output module\n");
+    CZC624Comms::message message = {0};
+    message.command = (uint8_t)CZC624Comms::spi_command_t::PowerDown;
+    _zc614_comms.send_message(message);
 }

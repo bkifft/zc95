@@ -114,6 +114,166 @@ void CSavedSettings::set_ramp_up_time_seconds(uint8_t time_secs)
     _eeprom_contents[(uint8_t)setting::RampUpTimeSecs] = time_secs;
 }
 
+uint8_t CSavedSettings::get_audio_gain_left()
+{
+    return _eeprom_contents[(uint8_t)setting::AudioGainL];
+}
+
+uint8_t CSavedSettings::get_audio_gain_right()
+{
+    return _eeprom_contents[(uint8_t)setting::AudioGainR];
+}
+
+void CSavedSettings::set_audio_gain_left(uint8_t gain)
+{
+    _eeprom_contents[(uint8_t)setting::AudioGainL] = gain;
+}
+
+void CSavedSettings::set_audio_gain_right(uint8_t gain)
+{
+    _eeprom_contents[(uint8_t)setting::AudioGainR] = gain;
+}
+
+bool CSavedSettings::get_mic_preamp_enabled()
+{
+    return _eeprom_contents[(uint8_t)setting::MicPreAmp] > 0;
+}
+
+void CSavedSettings::set_mic_preamp_enabled(bool enabled)
+{
+    _eeprom_contents[(uint8_t)setting::MicPreAmp] = enabled ? 1 : 0;
+}
+
+bool CSavedSettings::get_mic_power_enabled()
+{
+    return _eeprom_contents[(uint8_t)setting::MicPower] > 0;
+}
+
+void CSavedSettings::set_mic_power_enabled(bool enabled)
+{
+    _eeprom_contents[(uint8_t)setting::MicPower] = enabled ? 1 : 0;
+}
+
+CSavedSettings::setting_audio CSavedSettings::get_audio_setting()
+{
+    return (CSavedSettings::setting_audio)_eeprom_contents[(uint8_t)setting::Audio];
+}
+
+void CSavedSettings::set_audio_setting(setting_audio setting)
+{
+    _eeprom_contents[(uint8_t)setting::Audio] = (uint8_t)setting;
+}
+
+CSavedSettings::setting_debug CSavedSettings::get_debug_dest()
+{
+return (CSavedSettings::setting_debug)_eeprom_contents[(uint8_t)setting::Debug];
+}
+
+void CSavedSettings::set_debug_dest(setting_debug setting)
+{
+    _eeprom_contents[(uint8_t)setting::Debug] = (uint8_t)setting;
+}
+
+CSavedSettings::setting_aux_port_use CSavedSettings::get_aux_port_use()
+{
+    return (CSavedSettings::setting_aux_port_use)_eeprom_contents[(uint8_t)setting::AuxPort];
+}
+
+void CSavedSettings::set_aux_port_use(setting_aux_port_use setting)
+{
+    _eeprom_contents[(uint8_t)setting::AuxPort] = (uint8_t)setting;
+}
+
+bool CSavedSettings::get_wifi_credentials(std::string &out_ssid, std::string &out_password)
+{
+    // If wifi not yet configured, don't try to get ssid/password
+    if (_eeprom_contents[(uint8_t)setting::WiFiConfigured] != EEPROM_MAGIC_VAL)
+        return false;
+
+    // If the last character of the ssid isn't a NULL, somethings gone wrong (WifiPSK is the next thing after WifiSSID)
+    if (_eeprom_contents[(uint8_t)setting::WifiPSK - 1] != '\0')
+        return false;
+    
+    // If the last character of the password isn't a NULL, somethings gone wrong (WiFiConfigured is the next thing after WifiPSK)
+    if (_eeprom_contents[(uint8_t)setting::WiFiConfigured - 1] != '\0')
+        return false;
+    
+    out_ssid = (char*)&_eeprom_contents[(uint8_t)setting::WifiSSID];
+    out_password = (char*)&_eeprom_contents[(uint8_t)setting::WifiPSK];
+
+    return true;
+}
+
+bool CSavedSettings::set_wifi_credentials(std::string ssid, std::string password)
+{
+    if (ssid.length() > (uint8_t)setting::WifiPSK - (uint8_t)setting::WifiSSID - 1)
+    {
+        printf("ssid [%s] too long, not saving\n", ssid.c_str());
+        return false;
+    }
+
+    if (ssid.length() > (uint8_t)setting::WiFiConfigured - (uint8_t)setting::WifiPSK - 1)
+    {
+        printf("password [%s] too long, not saving\n", password.c_str());
+        return false;
+    }
+
+    strcpy((char*)&_eeprom_contents[(uint8_t)setting::WifiSSID], ssid.c_str()    );
+    strcpy((char*)&_eeprom_contents[(uint8_t)setting::WifiPSK] , password.c_str());
+    _eeprom_contents[(uint8_t)setting::WiFiConfigured] = EEPROM_MAGIC_VAL;
+
+    return true;
+}
+
+void CSavedSettings::clear_wifi_credentials()
+{
+    memset(&_eeprom_contents[(uint8_t)setting::WifiSSID], 0, (uint8_t)setting::WifiPSK - (uint8_t)setting::WifiSSID);
+    _eeprom_contents[(uint8_t)setting::WiFiConfigured] = 0;
+}
+
+bool CSavedSettings::wifi_is_configured()
+{
+    return (_eeprom_contents[(uint8_t)setting::WiFiConfigured] == EEPROM_MAGIC_VAL);
+}
+
+bool CSavedSettings::get_wifi_ap_psk(std::string &out_psk)
+{
+    out_psk = "";
+    // If the last character of the psk isn't a NULL, somethings gone wrong
+    if (_eeprom_contents[(uint8_t)setting::WifiApPskEnd] != '\0')
+        return false;
+
+    out_psk = (char*)&_eeprom_contents[(uint8_t)setting::WifiApPsk];
+    
+    // A psk length < 8 is invalid and won't work
+    return (out_psk.length() >= 8);    
+}
+
+bool CSavedSettings::set_wifi_ap_psk(std::string psk)
+{
+    if (psk.length() < 8)
+    {
+        printf("set_wifi_ap_psk(): psk of [%s] is too short (must be 8-16 characters)\n", psk.c_str());
+        return false;
+    }
+
+    if (psk.length() > 16)
+    {
+        printf("set_wifi_ap_psk(): psk of [%s] is too long (must be 8-16 characters)\n", psk.c_str());
+        return false;
+    }
+
+    clear_saved_ap_psk();
+    strcpy((char*)&_eeprom_contents[(uint8_t)setting::WifiApPsk], psk.c_str());
+
+    return true;
+}
+
+void CSavedSettings::clear_saved_ap_psk()
+{
+    memset(&_eeprom_contents[(uint8_t)setting::WifiApPsk], 0, ((uint8_t)setting::WifiApPskEnd - (uint8_t)setting::WifiApPsk) + 1);
+}
+
 bool CSavedSettings::get_collar_config(uint8_t collar_id, struct collar_config &collar_conf)
 {
     if (collar_id > 9)
@@ -151,7 +311,7 @@ void CSavedSettings::eeprom_initialise()
 {
     printf("Initialise EEPROM...\n");
     memset(_eeprom_contents, 0, sizeof(_eeprom_contents));
-    _eeprom_contents[(uint16_t)setting::EepromInit] = 0; // write this seperatly & last, in case something goes wrong mid way
+    _eeprom_contents[(uint16_t)setting::EepromInit] = 0; // write this separately & last, in case something goes wrong mid way
 
     // Set channels 0->internal Chan1, 1->internal chan2, etc..., and the rest to none
     for (int channel_id=0; channel_id < 4; channel_id++)
@@ -170,11 +330,23 @@ void CSavedSettings::eeprom_initialise()
     // Default LED brightness to 10
     _eeprom_contents[(uint8_t)setting::LEDBrightness] = 10;
 
-    // Default power level step to 10, giving 100 power levels
+    // Default power level step to 10, giving 100 power levels. TODO: Remove. no longer applicable with POTs for power adjustment, not rotary encoders.
     _eeprom_contents[(uint8_t)setting::PowerStep] = 10;
 
     // Ramp up time - 5 secs seems like a reasonable default
     _eeprom_contents[(uint8_t)setting::RampUpTimeSecs] = 5;
+
+    // Gain - put it somewhere near the middle. Note that the config screen changes
+    // it in 5 step increments, so it's best if the default is a multiple of 5
+    _eeprom_contents[(uint8_t)setting::AudioGainL] = 130;
+    _eeprom_contents[(uint8_t)setting::AudioGainR] = 130;
+
+    // Default microphone power and preamp to off - i.e. default is line level input
+    _eeprom_contents[(uint8_t)setting::MicPower]  = 0;
+    _eeprom_contents[(uint8_t)setting::MicPreAmp] = 0;
+
+    _eeprom_contents[(uint8_t)setting::Audio]  = (uint8_t)setting_audio::AUTO;
+    _eeprom_contents[(uint8_t)setting::Debug]  = (uint8_t)setting_debug::ACC_PORT;
 
     for (uint8_t collar_id = 0; collar_id < EEPROM_CHANNEL_COUNT; collar_id++)
         initialise_collar(collar_id);

@@ -4,6 +4,8 @@
 
 *Disclaimer*: These instructions are complete to the best of my knowledge, however I've only built the one so far, and that was over quite some time, so there may be omissions.
 
+There is now an optional audio [input board](./AudioInput-Build.md) too.
+
 ## Prerequisites 
 These notes assume a reasonable amount of experience assembling electronic kits. Other than through hole soldering, it also requires:
 * Soldering 1 SMD part on the front panel control board. This is a SOIC-16 package, so fairly large / easy to solder
@@ -30,12 +32,12 @@ The next page should show a list of all parts found / matched. Deselect the SS21
 ### PCB Parts
 All parts required to populate the PCBs - with the exception of the transformers - can be purchased from LCSC, and this BOM spreadsheet lists required parts + quantity with the LCSC part number for each board on separate tabs:
 
-[BoM (openoffice format)](BoM.ods)
+[BoM (openoffice format)](BoM.fods)
 
 As with the MK312-BT, the PFETs (IRF9Z24NPBF) in particular should not be substituted with anything similar, the exact part should be used.
 
 ### Misc parts
-[The BoM spreadsheet](BoM.ods) includes a Misc tab with the rest of the parts required to complete the build (case, display, etc.).
+[The BoM spreadsheet](BoM.fods) includes a Misc tab with the rest of the parts required to complete the build (case, display, etc.).
 
 
 ## Assembly
@@ -55,8 +57,7 @@ Photo of board as it arrived from JLCPCB:
 * Solder short (~12cm or so) wires on to J13, and fit spade connectors on the other end for the battery
 * R14 & D4 (top middle) don't need to be populated. It's for a power LED that has no place on the front panel.
 * J20 (I2C header, bottom left) is for future expansion and doesn't need to be populated
-* J17 (just below battery, to the right) is also for future expansion and doesn't need to be populated
-
+* J17 (just below battery, to the right) is for the optional audio input board; if building that, fit a 2.54mm pin header, otherwise leave unpopulated
 
 Then (optionally) plug a 433MHz transmitter into J11
 
@@ -137,13 +138,13 @@ Finally, attach the front panel controls board using 20mm bolts. The completed a
 
 * Slot the boards into the case, and screw in place: Screw Length (Excluding Head): 1/4" (6.5mm), Screw Size: No.6 (3.5mm)
 
-* Stick the battery down. Suggest using 3M double sided tape (‎MNT-FT24MM-16FT)
+* Stick the battery down. Suggest using 3M double sided tape (MNT-FT24MM-16FT)
 
 * Connect front panel to main board using IDC cable
 
 * Connect LCD to main board using 10pin cable
 
-* Copy main board firmware onto first Pico (see section below), then plug into main board (USB socket pointing towards the left / nearest case edge)
+* Copy main board firmware onto first Pico, or a Pico W if wanting remote access (see section below), then plug into main board (USB socket pointing towards the left / nearest case edge)
 
 * Copy ZC624 firmware onto second Pico (see section below), then plug into ZC624 board (USB socket pointing towards the left)
 
@@ -156,12 +157,14 @@ Assembled ZC95 should look like:
 ![zc95 assembled]
 
 ### Loading firmware
+Download firmware from [Releases](https://github.com/CrashOverride85/zc95/releases).
+
 To load firmware onto a Pico:
 * Hold down the BOOTSEL button
 * Connect to PC via USB
 * The Pico should appear as a USB mass storage device. Drag the appropriate uf2 firmware binary onto the drive:
-  - [zc95.uf2](../firmware/zc95.uf2) - Main board firmware
-  - [OutputZc.uf2](../firmware/OutputZc.uf2) - ZC624 firmware
+  - zc95.uf2 - Main board firmware
+  - OutputZc.uf2 - ZC624 firmware
 
 And don't mix the two up!
 
@@ -177,7 +180,7 @@ If any of the I2C devices aren't detected, you should see an error similar to th
 ![hw check fail]
 
 Here, it can't find the two ICs on the front panel (in this case, the IDC cable was unplugged).
-There is also serial debugging output on the 3.5mm serial connector on the front panel at RS232 levels.
+There is serial debugging output on the "Accessory" DB9 connector (tx pin 3, ground pin 5) on the front panel at RS232 levels.
 
 There is also debugging output from the ZC624 board on the serial header. Note that is at 3v3 level, and RS232 levels would damage it. 
 

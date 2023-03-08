@@ -9,11 +9,16 @@
 #include "../core1/output/CChannelConfig.h"
 #include "../core1/CRoutineOutput.h"
 #include "../core1/routines/CRoutine.h"
-#include "../core1/routines/CRoutineMaker.h"
+#include "../core1/routines/CRoutines.h"
 #include "../config.h"
 #include "../CSavedSettings.h"
 #include "../ECButtons.h"
 #include "../CGetButtonState.h"
+#include "../CHwCheck.h"
+#include "../AudioInput/CAudio.h"
+#include "../CAnalogueCapture.h"
+#include "../RemoteAccess/CWifi.h"
+
 #include <string>
 #include <vector>
 
@@ -22,7 +27,17 @@
 class CMenuRoutineSelection : public CMenu
 {
     public:
-        CMenuRoutineSelection(CDisplay* display, std::vector<CRoutineMaker*> *routines, CGetButtonState *buttons, CSavedSettings *settings, CRoutineOutput *routine_output);
+        CMenuRoutineSelection(
+                CDisplay* display, 
+                std::vector<CRoutines::Routine> *routines, 
+                CGetButtonState *buttons, 
+                CSavedSettings *settings, 
+                CRoutineOutput *routine_output, 
+                CHwCheck *hwCheck, 
+                CAudio *audio, 
+                CAnalogueCapture *analogueCapture, 
+                CWifi *wifi);
+
         ~CMenuRoutineSelection();
         void button_pressed(Button button);
         void button_released(Button button);
@@ -31,15 +46,19 @@ class CMenuRoutineSelection : public CMenu
         void show();
 
     private:
+        bool is_audio_routine(routine_conf conf);
         COptionsList *_routine_disply_list = NULL;
         struct display_area _area;
         CDisplay* _display;
-        std::vector<CRoutineMaker*> *_routines;
+        std::vector<CRoutines::Routine> *_routines;
         CGetButtonState *_buttons;
         CSavedSettings *_settings;
         CRoutineOutput *_routine_output;
+        CHwCheck *_hwCheck;
+        CAudio *_audio;
         int _last_selection = -1;
-
+        CAnalogueCapture *_analogueCapture;
+        CWifi *_wifi;
 };
 
 #endif

@@ -19,7 +19,7 @@
 #include "CMenuRoutineAdjust.h"
 
 
-CMenuRoutineAdjust::CMenuRoutineAdjust(CDisplay* display, CRoutineMaker* routine_maker, CGetButtonState *buttons, CRoutineOutput *routine_output)
+CMenuRoutineAdjust::CMenuRoutineAdjust(CDisplay* display, CRoutines::Routine routine, CGetButtonState *buttons, CRoutineOutput *routine_output, CAudio *audio)
 {
     printf("CMenuRoutineAdjust() \n");
     struct display_area area;
@@ -27,13 +27,14 @@ CMenuRoutineAdjust::CMenuRoutineAdjust(CDisplay* display, CRoutineMaker* routine
     _buttons = buttons;
     _exit_menu = false;
     _area = display->get_display_area();
+    _audio = audio;
 
     _routine_output = routine_output;
 
     // get routine config
-    CRoutine* routine = routine_maker();
-    routine->get_config(&_active_routine_conf);
-    delete routine;
+    CRoutine* routine_ptr = routine.routine_maker(routine.param);
+    routine_ptr->get_config(&_active_routine_conf);
+    delete routine_ptr;
 
     // Use the top half of the display for the list routine paramers that can be adjusted
     area = _area;
@@ -48,6 +49,8 @@ CMenuRoutineAdjust::CMenuRoutineAdjust(CDisplay* display, CRoutineMaker* routine
 
     // Set the text used on the status bar
     _title = _active_routine_conf.name;
+
+    _audio->set_audio_mode(_active_routine_conf.audio_processing_mode);
 }
 
 CMenuRoutineAdjust::~CMenuRoutineAdjust()
@@ -66,6 +69,7 @@ CMenuRoutineAdjust::~CMenuRoutineAdjust()
     }
 
     _routine_output->stop_routine();
+    _audio->set_audio_mode(audio_mode_t::OFF);
 }
 
 void CMenuRoutineAdjust::button_released(Button button)
@@ -78,8 +82,9 @@ void CMenuRoutineAdjust::button_released(Button button)
 
 void CMenuRoutineAdjust::button_pressed(Button button)
 {
-    // "A" button is passed onto routines, that may or may not use it
+    uint8_t menu_selection = _routine_adjust_display_list->get_current_selection_id();
 
+    // "A" button is passed onto routines, that may or may not use it
     if (button == Button::A)
     {
         _routine_output->soft_button_pressed(soft_button::BUTTON_A, true);
@@ -90,6 +95,12 @@ void CMenuRoutineAdjust::button_pressed(Button button)
        _exit_menu = true;
     }
 
+    // Menu up / down
+    
+    // If there's no options, exit now
+    if (_active_routine_conf.menu.size() <= 0)
+        return;
+
     if (button == Button::C) // "Up"
     {
         _routine_adjust_display_list->up();
@@ -97,15 +108,29 @@ void CMenuRoutineAdjust::button_pressed(Button button)
     }
 
     if (button == Button::D) // "Down"
-    {
+    {       
         _routine_adjust_display_list->down();
         set_options_on_multi_choice_list();
+    }
+
+    // if selected menu has changed, signal the routine (although most won't care)
+    if (button == Button::C || button == Button::D) // Up or Down
+    {
+        if (_routine_adjust_display_list->get_current_selection_id() != menu_selection)
+        {
+            struct menu_entry *menu_item = &(_active_routine_conf.menu[_routine_adjust_display_list->get_current_selection()]);
+            _routine_output->menu_selected(menu_item->id);
+        }
     }
 }
 
 void CMenuRoutineAdjust::adjust_rotary_encoder_change(int8_t change)
 {
     int32_t new_current_val = 0;
+
+    if (_active_routine_conf.menu.size() <= 0)
+        return;
+
     struct menu_entry *menu_item = &(_active_routine_conf.menu[_routine_adjust_display_list->get_current_selection()]);
 
     switch (menu_item->menu_type)
@@ -139,13 +164,48 @@ void CMenuRoutineAdjust::adjust_rotary_encoder_change(int8_t change)
 
             _routine_output->menu_multi_choice_change(menu_item->id, menu_item->multichoice.choices[_routine_multi_choice_list->get_current_selection()].choice_id);
             break;
+
+        case menu_entry_type::AUDIO_VIEW_SPECT:
+            if (change >= 1)
+            {
+                _audio->increment_trigger_point();
+            }
+            else if (change <= -1)
+            {
+                _audio->decrement_trigger_point();
+            }
+
+        case menu_entry_type::AUDIO_VIEW_WAVE:
+        case menu_entry_type::AUDIO_VIEW_INTENSITY_STEREO:
+        case menu_entry_type::AUDIO_VIEW_INTENSITY_MONO:
+        case menu_entry_type::AUDIO_VIEW_VIRTUAL_3:
+            if (change >= 1)
+            {
+                increment_gain(10);
+            }
+            else if (change <= -1)
+            {
+                decrement_gain(10);
+            }
+
+            break;
     }
 }
 
 void CMenuRoutineAdjust::draw()
 {
+    if (_routine_output->get_lua_script_state() == lua_script_state_t::INVALID)
+    {
+        draw_bad_script_screen();
+        return;
+    }
+
     // Show the parameter selection list at the top
     _routine_adjust_display_list->draw();
+
+    // If no menu entries (i.e. pattern with nothing configurable), nothing to do
+    if (_active_routine_conf.menu.size() <= 0)
+        return;
 
     // Show menu entry
     uint8_t current_selection = _routine_adjust_display_list->get_current_selection();
@@ -173,7 +233,77 @@ void CMenuRoutineAdjust::draw()
             _routine_multi_choice_list->draw();
             break;
         }
+
+        case menu_entry_type::AUDIO_VIEW_SPECT:
+        {
+            uint8_t x0 = _area.x0+1;
+            uint8_t y0 = _area.y0 + (((_area.y1-_area.y0)/3) * 2) - 11;
+            uint8_t x1 = _area.x1-3;
+            uint8_t y1 = _area.y0 + (((_area.y1-_area.y0)/3) * 2) + 21;
+
+            _audio->draw_audio_view(x0, y0, x1, y1);
+
+            break;
+        }
+
+        case menu_entry_type::AUDIO_VIEW_WAVE:
+        {
+            uint8_t x0 = _area.x0+1;
+            uint8_t y0 = _area.y0 + (((_area.y1-_area.y0)/3) * 2) - 11;
+            uint8_t x1 = _area.x1-3;
+            uint8_t y1 = _area.y0 + (((_area.y1-_area.y0)/3) * 2) + 21;
+
+            _audio->draw_audio_wave(x0, y0, x1, y1, true, false);
+
+            break;
+        }
+
+        case menu_entry_type::AUDIO_VIEW_INTENSITY_MONO:
+        {
+            uint8_t x0 = _area.x0+1;
+            uint8_t y0 = _area.y0 + (((_area.y1-_area.y0)/3) * 2) - 11;
+            uint8_t x1 = _area.x1-3;
+            uint8_t y1 = _area.y0 + (((_area.y1-_area.y0)/3) * 2) + 21;
+
+            _audio->draw_audio_wave(x0, y0, x1, y1, true, true);
+
+            break;
+        }
+
+        case menu_entry_type::AUDIO_VIEW_INTENSITY_STEREO:
+        {
+            uint8_t x0 = _area.x0+1;
+            uint8_t y0 = _area.y0 + (((_area.y1-_area.y0)/3) * 2) - 11;
+            uint8_t x1 = _area.x1-3;
+            uint8_t y1 = _area.y0 + (((_area.y1-_area.y0)/3) * 2) + 21;
+
+            _audio->draw_audio_wave(x0, y0, x1, y1, true, false);
+
+            break;
+        }
+
+        case menu_entry_type::AUDIO_VIEW_VIRTUAL_3:
+        {
+            uint8_t x0 = _area.x0+1;
+            uint8_t y0 = _area.y0 + (((_area.y1-_area.y0)/3) * 2) - 11;
+            uint8_t x1 = _area.x1-3;
+            uint8_t y1 = _area.y0 + (((_area.y1-_area.y0)/3) * 2) + 21;
+
+            _audio->draw_audio_virt3(x0, y0, x1, y1, true);
+
+            break;
+        }
     }
+}
+
+void CMenuRoutineAdjust::draw_bad_script_screen()
+{
+    color_t colour = hagl_color(0xFF, 0x00, 0x00);
+
+    hagl_draw_line(_area.x0, _area.y0, _area.x1, _area.y1, colour);
+    hagl_draw_line(_area.x1, _area.y0, _area.x0, _area.y1, colour);
+
+    _display->put_text("Script error", 0, _area.y0 + ((_area.y1 - _area.y0) / 2), hagl_color(0xFF, 0xFF, 0x00));
 }
 
 void CMenuRoutineAdjust::show()
@@ -227,6 +357,9 @@ void CMenuRoutineAdjust::draw_horz_bar_graph(int16_t x, int16_t y, uint8_t width
 
 void CMenuRoutineAdjust::set_options_on_multi_choice_list()
 {
+    if (_active_routine_conf.menu.size() <= 0)
+        return;
+
     struct menu_entry selected = _active_routine_conf.menu[_routine_adjust_display_list->get_current_selection()];
     
     if (selected.menu_type == menu_entry_type::MULTI_CHOICE)
@@ -238,6 +371,73 @@ void CMenuRoutineAdjust::set_options_on_multi_choice_list()
             _routine_multi_choice_list->add_option(it->choice_name);
         }
 
-        _routine_multi_choice_list->set_selected(selected.multichoice.current_selection);
+        _routine_multi_choice_list->set_selected(choice_id_to_menu_index(selected, selected.multichoice.current_selection));
     }
+}
+
+// convert a choice id (whatever id is associated with an option) to a menu option (0 indexed menu item)
+uint8_t CMenuRoutineAdjust::choice_id_to_menu_index(struct menu_entry selected_menu, uint8_t choice_id)
+{    
+    for (size_t selected_choice_index = 0; selected_choice_index < selected_menu.multichoice.choices.size(); selected_choice_index++)
+    {
+        if (selected_menu.multichoice.choices[selected_choice_index].choice_id == choice_id)
+        {
+            return selected_choice_index;
+        }
+    }
+
+    printf("CMenuRoutineAdjust::choice_id_to_menu_index(): Invalid config for menu [%s]\n", selected_menu.title.c_str());
+    return 0;
+}
+
+void CMenuRoutineAdjust::increment_gain(uint8_t by)
+{
+    uint8_t left  = 0;
+    uint8_t right = 0;
+    _audio->get_current_gain(&left, &right);
+
+    int16_t new_left  = left;
+    int16_t new_right = right;
+
+    new_left  += by;
+    new_right += by;
+
+    if (new_left > 255)
+        left = 255;
+    else
+        left += by;
+
+    if (new_right > 255)
+        right = 255;
+    else
+        right += by;
+
+    _audio->set_gain(CAnalogueCapture::channel::LEFT , left );
+    _audio->set_gain(CAnalogueCapture::channel::RIGHT, right);
+}
+
+void CMenuRoutineAdjust::decrement_gain(uint8_t by)
+{
+    uint8_t left  = 0;
+    uint8_t right = 0;
+    _audio->get_current_gain(&left, &right);
+
+    int16_t new_left  = left;
+    int16_t new_right = right;
+
+    new_left  -= by;
+    new_right -= by;
+
+   if (new_left < 0)
+        left = 0;
+    else
+        left -= by;
+
+    if (new_right < 0)
+        right = 0;
+    else
+        right -= by;
+
+    _audio->set_gain(CAnalogueCapture::channel::LEFT , left );
+    _audio->set_gain(CAnalogueCapture::channel::RIGHT, right);
 }

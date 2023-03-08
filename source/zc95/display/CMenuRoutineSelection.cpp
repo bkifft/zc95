@@ -19,19 +19,22 @@
 #include "CMenuRoutineSelection.h"
 #include "CMenuRoutineAdjust.h"
 #include "CMenuSettings.h"
+#include "../globals.h"
 #include "../core1/output/CFullChannelAsSimpleChannel.h"
-
 #include "../core1/CRoutineOutput.h"
-
 
 #include <string.h>
 
 CMenuRoutineSelection::CMenuRoutineSelection(
     CDisplay* display, 
-    std::vector<CRoutineMaker*> *routines, 
+    std::vector<CRoutines::Routine> *routines, 
     CGetButtonState *buttons, 
     CSavedSettings *settings, 
-    CRoutineOutput *routine_output)
+    CRoutineOutput *routine_output,
+    CHwCheck *hwCheck,
+    CAudio *audio,
+    CAnalogueCapture *analogueCapture,
+    CWifi *wifi)
 {
     printf("CMenuRoutineSelection() \n");
     _display = display;
@@ -41,8 +44,11 @@ CMenuRoutineSelection::CMenuRoutineSelection(
     _buttons = buttons;
     _submenu_active = NULL;
     _settings = settings;
-
+    _hwCheck = hwCheck;
     _routine_output = routine_output;
+    _audio = audio;
+    _analogueCapture = analogueCapture;
+    _wifi = wifi;
 }
 
 CMenuRoutineSelection::~CMenuRoutineSelection()
@@ -80,17 +86,15 @@ void CMenuRoutineSelection::button_pressed(Button button)
         {
         if (button == Button::A) // Select
         {
-            CRoutineMaker* routine_maker = (*_routines)[_routine_disply_list->get_current_selection()];
-            //_routine_output->activate_routine(routine_maker);
-            _routine_output->activate_routine(_routine_disply_list->get_current_selection());
+            CRoutines::Routine routine = (*_routines)[_routine_disply_list->get_current_selection()];
             _last_selection = _routine_disply_list->get_current_selection();
-
-            set_active_menu(new CMenuRoutineAdjust(_display, routine_maker, _buttons, _routine_output));
+            set_active_menu(new CMenuRoutineAdjust(_display, routine, _buttons, _routine_output, _audio));
+            _routine_output->activate_routine(_routine_disply_list->get_current_selection());
         }
 
         if (button == Button::B) // "Config"
         {
-            set_active_menu(new CMenuSettings(_display, _buttons, _settings, _routine_output));
+            set_active_menu(new CMenuSettings(_display, _buttons, _settings, _routine_output, _hwCheck, _audio, _analogueCapture, _wifi));
         }
         
         if (button == Button::C) // "Up"
@@ -125,14 +129,35 @@ void CMenuRoutineSelection::show()
 
     // Get a list of routines to show
     _routine_disply_list->clear_options();
-    for (std::vector<CRoutineMaker*>::iterator it = _routines->begin(); it != _routines->end(); it++)
+    int index=0;
+    for (std::vector<CRoutines::Routine>::iterator it = _routines->begin(); it != _routines->end(); it++)
     {
         struct routine_conf conf;
-        CRoutine* routine = (*it)();
+        CRoutine* routine = (*it).routine_maker((*it).param);
         routine->get_config(&conf);
+
+        // Add a warning for routines that disable channel isolation
+        std::string name;
+        if (conf.enable_channel_isolation)
+            name = conf.name;
+        else
+            name = "(!)" + conf.name;
+
+        // Hide audio routies from menu if audio hardware not present. Show everything else.        
+        if (!is_audio_routine(conf))
+        {
+            _routine_disply_list->add_option(name, index);
+        }
+        else
+        {
+            if (_audio->get_audio_hardware_state() != audio_hardware_state_t::NOT_PRESENT)
+            {
+                _routine_disply_list->add_option(name, index);
+            }
+        }
+
+        index++;
         delete routine;
-        
-        _routine_disply_list->add_option(conf.name);
     }
 
     // If we've already been in a routine and come back to this menu, pre-select that routine, instead
@@ -141,4 +166,10 @@ void CMenuRoutineSelection::show()
     {
         _routine_disply_list->set_selected(_last_selection);
     }
+}
+
+// If a routine has any menu item that uses audio, return true
+bool CMenuRoutineSelection::is_audio_routine(routine_conf conf)
+{
+    return (conf.audio_processing_mode != audio_mode_t::OFF);
 }

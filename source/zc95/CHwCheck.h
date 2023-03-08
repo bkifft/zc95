@@ -10,29 +10,34 @@
 #include <hagl.h>
 
 #include "hardware/i2c.h"
+#include "CLedControl.h"
+#include "CControlsPortExp.h"
+#include "CBatteryGauge.h"
+#include "core1/output/ZC624Output/CZC624Comms.h"
 
 #define BAT_AVG_COUNT 50
 
 class CHwCheck
 {
     public:
-        CHwCheck();
-        void check();
+        CHwCheck(CBatteryGauge *batteryGauge);
+        ~CHwCheck();
+        void check_part1();
+        void check_part2(CLedControl *ledControl, CControlsPortExp *controls);
         void process();
-        uint8_t get_battery_percentage();
+        std::string get_zc624_version();
+        bool audio_digipot_found();
+        void die(CLedControl *led_control, std::string error_message);
+        static bool running_on_picow();
 
     private:
-        enum Cause {UNKNOWN, MISSING, BATTERY};
+        enum Cause {UNKNOWN, MISSING, BATTERY, ZC624_UNKNOWN, ZC624_STATUS, ZC624_VERSION};
         void show_error_text_missing(int y);
         void show_error_text_message(int y, std::string message);
-        void hw_check_failed(enum Cause casue);
+        void hw_check_failed(enum Cause casue, CLedControl *ledControl, CControlsPortExp *controls);
         void put_text(std::string text, int16_t x, int16_t y, color_t color);
-        static int cmpfunc (const void *a, const void *b);
-        static int cmpfunc_uint8_t (const void *a, const void *b);
-        
-        float get_adc_voltage();
-        float get_battery_voltage();
-        uint8_t get_real_time_battery_percentage();
+        void get_battery_readings();
+        void halt(CLedControl *led_control);
 
         class device
         {
@@ -40,22 +45,22 @@ class CHwCheck
                 uint8_t address;
                 std::string description;
                 std::string display;
+                bool optional;
                 bool present;
-
-                device(uint8_t addr, std::string desc, std::string disp)
+                
+                device(uint8_t addr, std::string desc, std::string disp, bool opt=false)
                 {
                     address = addr;
                     description = desc;
                     present = false;
                     display = disp;
+                    optional = opt;
                 }
         };
 
+        CZC624Comms *_zc624_comms;
         std::list<device> _devices;
-        uint64_t _last_update;
-        uint8_t _batt_percentage[BAT_AVG_COUNT] = {0};
-        uint8_t _batt_reading_idx = 0;
-        bool _inital_startup = true;
+        CBatteryGauge *_batteryGauge;
 };
 
 #endif

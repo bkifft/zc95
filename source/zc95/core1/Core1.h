@@ -4,7 +4,7 @@
 
 
 #include "routines/CRoutine.h"
-#include "routines/CRoutineMaker.h"
+#include "routines/CRoutines.h"
 
 #include "output/CChannelConfig.h"
 #include "output/collar/CCollarComms.h"
@@ -15,15 +15,17 @@
 #include "CPowerLevelControl.h"
 #include "Core1Messages.h"
 
-extern  mutex_t g_collar_message_mutex;
+extern mutex_t g_collar_message_mutex;
 extern CCollarComms::collar_message g_collar_message;
 
+extern mutex_t g_core1_suspend_mutex;
+extern struct semaphore g_core1_suspend_sem;
 
 class Core1
 {
 
     public:
-        Core1(std::vector<CRoutineMaker*> *routines, CSavedSettings *saved_settings);
+        Core1(std::vector<CRoutines::Routine> *routines, CSavedSettings *saved_settings);
         ~Core1();
         void init();
         void loop();
@@ -32,6 +34,7 @@ class Core1
         CPowerLevelControl *power_level_control;
         void menu_min_max_change(uint8_t menu_id, int16_t new_value);
         void menu_multi_choice_change(uint8_t menu_id, uint8_t choice_id);
+        void menu_selected(uint8_t menu_id);
         void update_channel_power(uint8_t channel);
         void trigger(trigger_socket socket, trigger_part part, bool active);
         void collar_transmit (uint16_t id, CCollarComms::collar_channel channel, CCollarComms::collar_mode mode, uint8_t power);
@@ -42,7 +45,10 @@ class Core1
         void process_messages();
         void process_message(message msg);
         void update_power_levels();
-        void set_output_chanels_to_off();
+        void set_output_chanels_to_off(bool enable_channel_isolation);
+        void process_audio_pulse_queue();
+        void check_validity_of_lua_script();
+        static void __not_in_flash_func(core1_suspend)(void);
 
         CChannelConfig *_channel_config;
         CRoutine *_active_routine = NULL;
@@ -50,12 +56,14 @@ class Core1
         CFullChannelAsSimpleChannel *_fullChannelAsSimpleChannels[MAX_CHANNELS];
         CSavedSettings *_saved_settings;
         COutputChannel *_real_output_channel[MAX_CHANNELS];
-        std::vector<CRoutineMaker*> *_routines;
+        std::vector<CRoutines::Routine> *_routines;
         uint16_t _output_power[MAX_CHANNELS] = {0};
         uint16_t _output_power_max[MAX_CHANNELS] = {0};    
+        pulse_message_t _pulse_messages[MAX_CHANNELS] = {0};
+        lua_script_state_t _script_script_state = lua_script_state_t::NOT_APPLICABLE;
 };
 
-Core1* core1_start(std::vector<CRoutineMaker*> *routines, CSavedSettings *saved_settings);
+Core1* core1_start(std::vector<CRoutines::Routine> *routines, CSavedSettings *saved_settings);
 
 #endif
 

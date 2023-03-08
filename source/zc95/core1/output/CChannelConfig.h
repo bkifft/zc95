@@ -9,13 +9,11 @@
 #include "COutputChannel.h"
 #include "../CPowerLevelControl.h"
 
-#include "mk312/COutput312b.h"
-
 #include "collar/CCollarComms.h"
 #include "collar/CCollarChannel.h"
 
-#include "zc1Output/CZC1ChannelFull.h"
-#include "zc1Output/CZC1Comms.h"
+#include "ZC624Output/CZC624ChannelFull.h"
+#include "ZC624Output/CZC624Comms.h"
 
 class CChannelConfig
 {
@@ -28,16 +26,14 @@ class CChannelConfig
         void loop();
 
         CCollarComms *get_collar_comms();
+        void shutdown_zc624();
 
     private:
         CSavedSettings *_saved_settings;
         CPowerLevelControl *_power_level_control;
         CCollarComms _collar_comms = CCollarComms(PIN_433TX); // 433MHz transmitter for collars
     
-        CZC1Comms _zc1_comms = CZC1Comms(spi1);    
+        CZC624Comms _zc614_comms = CZC624Comms(spi1, I2C_PORT);
 };
 
-
-
 #endif  
-

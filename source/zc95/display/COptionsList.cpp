@@ -26,9 +26,14 @@ COptionsList::COptionsList(CDisplay* display, struct display_area area)
     _area = area;
 }
 
-void COptionsList::add_option(std::string option)
+void COptionsList::add_option(std::string option_text)
 {
-    _options.push_back(option);
+    _options.push_back(option_t(option_text, -1));
+}
+
+void COptionsList::add_option(std::string option_text, int id)
+{
+    _options.push_back(option_t(option_text, id));
 }
 
 void COptionsList::clear_options()
@@ -42,6 +47,10 @@ void COptionsList::set_selected(uint8_t selection)
     if (selection < _options.size())
     {
         _current_selection = selection;
+    }
+    else
+    {
+        printf("COptionsList::set_selected: Error - passed invalid selection %d (max %d)\n", selection, _options.size());
     }
 }
 
@@ -80,10 +89,10 @@ void COptionsList::draw()
         if 
         (
             ((_current_selection+option) >= 0) &&
-            ((_current_selection+option) < _options.size())
+            ((_current_selection+option) < (int8_t)_options.size())
         )
         {
-            _display->put_text(_options[_current_selection+option], text_x, _area.y0 + centre_y + (option_height * option), colour);
+            _display->put_text(_options[_current_selection+option].DisplayText(), text_x, _area.y0 + centre_y + (option_height * option), colour);
         }
     }
 }
@@ -105,3 +114,7 @@ uint8_t COptionsList::get_current_selection()
     return _current_selection;
 }
 
+int COptionsList::get_current_selection_id()
+{
+    return _options[_current_selection].Id();
+}

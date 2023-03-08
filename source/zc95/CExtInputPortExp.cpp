@@ -17,16 +17,15 @@
  */
 
 #include "CExtInputPortExp.h"
-
-#include "hardware/i2c.h"
 #include "hardware/gpio.h"
+#include "globals.h"
 
 #include <string.h>
 
 /*
  * Deal with port expander U8, which is connected to:
  *   - GPIO1/2/3 on the accessory port
- *   - Trigger1/2 sockets - each socket is "stereo", and is connected to two I/O lines to allow for dual inputs per socket (currently unsupported)
+ *   - Trigger1/2 sockets - each socket is "stereo", and is connected to two I/O lines to allow for dual inputs per socket
  */ 
 
 CExtInputPortExp::CExtInputPortExp(uint8_t address, CLedControl *led, CRoutineOutput *routine_output)
@@ -38,6 +37,7 @@ CExtInputPortExp::CExtInputPortExp(uint8_t address, CLedControl *led, CRoutineOu
     _led = led;
     _interrupt = false;
     _routine_output = routine_output;
+    _debounce_recheck_time_us = 0;
     memset(_input_last_change_time_us, 0, sizeof(_input_last_change_time_us));
 }
 
@@ -45,7 +45,7 @@ CExtInputPortExp::CExtInputPortExp(uint8_t address, CLedControl *led, CRoutineOu
 // Can't do this in the constructor as i2c won't have been initialised 
 void CExtInputPortExp::clear_input()
 {
-    int retval = i2c_read_timeout_us(i2c_default, _address, &_last_read, 1, false, 1000);
+    int retval = i2c_read(__func__, _address, &_last_read, 1, false);
     if (retval == PICO_ERROR_GENERIC || retval == PICO_ERROR_TIMEOUT)
     {
       printf("CExtInputPortExp::clear_intput i2c read error!\n");
@@ -62,12 +62,18 @@ void CExtInputPortExp::interrupt()
 
 void CExtInputPortExp::process(bool force_update)
 {
+    if (_debounce_recheck_time_us > 0 && time_us_64() > _debounce_recheck_time_us)
+    {
+        force_update = true;
+        _debounce_recheck_time_us = 0;
+    }
+
     if (_interrupt || force_update)
     {
         _interrupt = false;
         uint8_t buffer[1];
-        
-        int retval = i2c_read_timeout_us(i2c_default, _address, buffer, 1, false, 1000);
+             
+        int retval = i2c_read(__func__, _address, buffer, 1, false);
         if (retval == PICO_ERROR_GENERIC || retval == PICO_ERROR_TIMEOUT)
         {
             printf("CExtInputPortExp::process i2c read error!\n");
@@ -75,7 +81,7 @@ void CExtInputPortExp::process(bool force_update)
             return;
         }
 
-        if (buffer[0] != _last_read)
+        if ((buffer[0] != _last_read) || force_update)
         {
             _last_read = buffer[0];
             update_trigger_leds();
@@ -96,6 +102,9 @@ bool CExtInputPortExp::has_input_state_changed(enum ExtInputPort input, bool *ne
     *new_state = input_state(input);
 
     input_state_changed = (last_input_state != *new_state);
+    
+    if (!input_state_changed)
+        return false;
 
     // Debounce input
     if (input_state_changed)
@@ -103,6 +112,7 @@ bool CExtInputPortExp::has_input_state_changed(enum ExtInputPort input, bool *ne
         if (time_us_64() - _input_last_change_time_us[(int)input] < TRIGGER_INPUT_DEBOUNCE_US)
         {
             _input_last_change_time_us[(int)input] = time_us_64();
+            _debounce_recheck_time_us = time_us_64() + TRIGGER_INPUT_DEBOUNCE_US;
             return false;
         }
 
@@ -117,63 +127,50 @@ bool CExtInputPortExp::has_input_state_changed(enum ExtInputPort input, bool *ne
     return input_state_changed;
 }
 
-bool CExtInputPortExp::has_input_been_triggered(enum ExtInputPort input)
+void CExtInputPortExp::update_trigger_leds()
 {
-  bool input_state;
-  if (has_input_state_changed(input, &input_state))
-  {
-    if (input_state)
-    {
-      return true;
-    }
-  }
-
-  return false;
+    update_led_for_trigger_port(Trigger::Trigger1);
+    update_led_for_trigger_port(Trigger::Trigger2);
 }
 
-bool CExtInputPortExp::get_trigger_state(Trigger trigger)
+void CExtInputPortExp::update_led_for_trigger_port(Trigger trigger)
 {
     ExtInputPort input_a;
     ExtInputPort input_b;
+    LED led;
 
     switch(trigger)
     {
         case Trigger::Trigger1:
             input_a = ExtInputPort::TRG1_A;
             input_b = ExtInputPort::TRG1_B;
+            led = LED::Trigger1;
             break;
 
         case Trigger::Trigger2:
             input_a = ExtInputPort::TRG2_A;
             input_b = ExtInputPort::TRG2_B;
+            led = LED::Trigger2;
             break;
 
         default:
-            return false;
+            return;
     }
 
-    // printf("trg=%d, %d, %d\n", (uint8_t)trigger, input_state(input_a) , input_state(input_b) );
+    bool partA_active = (input_state(input_a) == 0);
+    bool partB_active = (input_state(input_b) == 0);
 
-    if (!input_state(input_a) && input_state(input_b))
-    {
-        // Nothing connected
-        return false;
-    }
-
-    return !input_state(input_a);
-}
-
-void CExtInputPortExp::update_trigger_leds()
-{
-    if (get_trigger_state(Trigger::Trigger1))
-        _led->set_led_colour(LED::Trigger1, LedColour::Blue);
+    if (partA_active && partB_active)
+        _led->set_led_colour(led, LedColour::Yellow);
+    else if (partA_active)
+        _led->set_led_colour(led, LedColour::Green);
+    else if (partB_active)
+        _led->set_led_colour(led, LedColour::Red);
     else
-         _led->set_led_colour(LED::Trigger1, LedColour::Black);
+        _led->set_led_colour(led, LedColour::Black);
 
-    if (get_trigger_state(Trigger::Trigger2))
-        _led->set_led_colour(LED::Trigger2, LedColour::Blue);
-    else
-         _led->set_led_colour(LED::Trigger2, LedColour::Black);
+    //if (trigger == Trigger::Trigger1)
+    //    printf("trg=%d, a=%d, b=%d\n", (uint8_t)trigger, input_state(input_a) , input_state(input_b) );
 }
 
 void CExtInputPortExp::update_active_routine()
@@ -189,7 +186,11 @@ void CExtInputPortExp::update_active_routine_trigger(enum ExtInputPort input, tr
     bool state;
     if (has_input_state_changed(input, &state))
     {
-        _routine_output->trigger(socket, part, state);
+        // At this point, because there are pull ups on the input lines and trigging one gounds it, a 1/high read from the 
+        // the port expander means a trigger isn't active (or just isn't plugged in).
+        // A low means it's been triggered (button pushed, or whatever)
+        // But for routines, it makes far more sense for that to be flipped, i.e. active=true means pressed/triggered
+        _routine_output->trigger(socket, part, !state);
     }
 }
 
@@ -197,10 +198,10 @@ void CExtInputPortExp::reset_acc_port()
 {
     _output_mask = 0xFF;
 
-    int retval = i2c_write_timeout_us(i2c_default, _address, &_output_mask, 1, false, 1000);
+    int retval = i2c_write(__func__, _address, &_output_mask, 1, false);
     if (retval == PICO_ERROR_GENERIC || retval == PICO_ERROR_TIMEOUT)
     {
-      printf("CExtInputPortExp::set_acc_io_port_state i2c write error!\n");
+        printf("CExtInputPortExp::set_acc_io_port_state i2c write error!\n");
     }
 }
 
@@ -221,8 +222,8 @@ void CExtInputPortExp::set_acc_io_port_state(enum ExtInputPort output, bool high
         default:
             return;
     }
-
-    int retval = i2c_write_timeout_us(i2c_default, _address, &_output_mask, 1, false, 1000);
+    
+    int retval = i2c_write(__func__, _address, &_output_mask, 1, false);
     if (retval == PICO_ERROR_GENERIC || retval == PICO_ERROR_TIMEOUT)
     {
       printf("CExtInputPortExp::set_acc_io_port_state i2c write error!\n");

@@ -7,17 +7,19 @@
 
 #include "../core1/routines/CRoutine.h"
 #include "../core1/CRoutineOutput.h"
-#include "../core1/routines/CRoutineMaker.h"
+#include "../core1/routines/CRoutines.h"
 #include "../config.h"
 #include "../ECButtons.h"
 #include "../CGetButtonState.h"
+#include "../AudioInput/CAudio.h"
+
 #include <string>
 #include <vector>
 
 class CMenuRoutineAdjust : public CMenu
 {
     public:
-        CMenuRoutineAdjust(CDisplay* display, CRoutineMaker* routine_maker, CGetButtonState *buttons, CRoutineOutput *routine_output);
+        CMenuRoutineAdjust(CDisplay* display, CRoutines::Routine routine, CGetButtonState *buttons, CRoutineOutput *routine_output, CAudio *audio);
         ~CMenuRoutineAdjust();
         void button_pressed(Button button);
         void button_released(Button button);
@@ -28,6 +30,10 @@ class CMenuRoutineAdjust : public CMenu
     private:
         void set_options_on_multi_choice_list();
         void draw_horz_bar_graph(int16_t x, int16_t y, uint8_t width, uint8_t height, int16_t min_val, int16_t max_val, int16_t current_val, std::string UoM, color_t bar_colour);
+        uint8_t choice_id_to_menu_index(struct menu_entry selected_menu, uint8_t choice_id);
+        void increment_gain(uint8_t by);
+        void decrement_gain(uint8_t by);
+        void draw_bad_script_screen();
 
         COptionsList *_routine_adjust_display_list = NULL;
         COptionsList *_routine_multi_choice_list = NULL;
@@ -36,6 +42,7 @@ class CMenuRoutineAdjust : public CMenu
         struct routine_conf _active_routine_conf;
         CGetButtonState *_buttons;
         CRoutineOutput *_routine_output;
+        CAudio *_audio;
 };
 
 #endif
